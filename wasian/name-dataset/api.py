@@ -1,5 +1,6 @@
 from names_dataset import NameDataset
 
+
 def main():  # pragma: no cover
     """
     The main function executes on commands:
