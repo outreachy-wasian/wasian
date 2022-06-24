@@ -1,5 +1,0 @@
-SELECT ?item 
-WHERE 
-{
-  ?item wdt:P31 wd:Q29548341. # Wikidata property related to research
-}
