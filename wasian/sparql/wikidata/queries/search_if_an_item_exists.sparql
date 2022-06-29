@@ -1,0 +1,4 @@
+SELECT ?exists
+WHERE{
+    BIND(EXISTS{?item ?label "%s"@en .} AS ?exists)
+}
