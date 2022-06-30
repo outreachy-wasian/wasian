@@ -1,4 +1,11 @@
-SELECT ?exists
-WHERE{
-    BIND(EXISTS{?item ?label "%s"@en .} AS ?exists)
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+
+SELECT DISTINCT ?item ?itemLabel
+WHERE {
+    ?item rdfs:label|foaf:name|skos:altLabel "%s"@en .
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }

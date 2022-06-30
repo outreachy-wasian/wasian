@@ -10,9 +10,6 @@ class WikidataItem:
         self.site = site
         self.label_dict = label_dict
 
-    def check_item_exists(self):
-        item = ItemPage(self.site).exists()
-
     def create_item(self) -> ItemPage:
         new_item = ItemPage(self.site)
         new_item.editLabels(labels=self.label_dict, summary="Setting labels")

@@ -3,7 +3,7 @@ PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 PREFIX bd: <http://www.bigdata.com/rdf#>
 
-SELECT ?item ?itemLabel {
+SELECT DISTINCT ?item ?itemLabel {
 
   VALUES (?class) {(wd:Q112684896)}
   ?class wdt:P3176 ?item
