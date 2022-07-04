@@ -10,6 +10,6 @@ class WikidataQualifier:
 
     def set_qualifier_targets(self) -> Claim:
         # set qualifier
-        qualifier: Claim = Claim(self.data_site, self.prop)
+        qualifier = Claim(self.data_site, self.prop)
         qualifier.setTarget(self.target)
         return qualifier

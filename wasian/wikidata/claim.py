@@ -3,9 +3,8 @@ from pywikibot import Claim, ItemPage, DataSite
 
 class WikidataClaim:
 
-    def __init__(self, data_site: DataSite, target: object, prop: str, item: str):
+    def __init__(self, data_site: DataSite, prop: str, item: str):
         self.data_site = data_site
-        self.target = target
         self.prop = prop
         self.item = item
 
