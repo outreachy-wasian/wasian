@@ -14,5 +14,5 @@ class WikidataItem:
         new_item = ItemPage(self.site)
         new_item.editLabels(labels=self.label_dict, summary="Setting labels")
         # Add description here or in another function
-        return new_item.getID()
+        return new_item
 

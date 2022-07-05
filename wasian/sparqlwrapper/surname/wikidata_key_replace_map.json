@@ -1,21 +1,17 @@
 {
   "ack": "acknowledged",
-  "aff": "affiliation string",
   "alternate_bibcode": "bibcode",
   "alternate_title": "native label",
   "arxiv_class": "arXiv classification",
   "author": "author name string",
   "bibcode": "ADS bibcode",
-  "copyright": "copyright representative",
   "grant": "grants",
   "facility": "has facility",
   "isbn": "ISBN-13",
   "lang": "language of work or name",
-  "keyword": "code",
   "page_count": "number of pages",
-  "orcid_pub": "ORCID iD",
   "page_range": "page(s)",
-  "pubdate": "publication date",
+  "date": "publication date",
   "pub": "published in",
   "simbid": "SIMBAD ID"
 }
