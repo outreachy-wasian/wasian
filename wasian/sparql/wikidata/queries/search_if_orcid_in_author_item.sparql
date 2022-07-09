@@ -7,7 +7,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 # Modified code. Credit: https://www.wikidata.org/wiki/Wikidata:Request_a_query/Archive/2019/03#reach_ORCIDs_of_authors_via_PubMed-IDs_of_articles
 SELECT DISTINCT ?item ?itemLabel ?orcid
 WHERE {
-  ?item rdfs:label|foaf:name|skos:altLabel "%s"@en .
-  VALUES ?orcid { "%s" }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" .}
+  ?item rdfs:label|foaf:name|skos:altLabel """%s"""@en .
+  VALUES ?orcid { """%s""" }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language 'en' .}
 }

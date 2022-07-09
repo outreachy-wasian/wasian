@@ -1,0 +1,11 @@
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX ps: <http://www.wikidata.org/prop/statement/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT DISTINCT ?item
+WHERE {
+  ?item ?itemLabel """%s"""@en .
+  ?item p:P31 ?statement0.
+  ?statement0 (ps:P31/(wdt:P279*)) wd:Q19803443.
+}

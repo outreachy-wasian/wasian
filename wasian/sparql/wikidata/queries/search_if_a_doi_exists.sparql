@@ -2,5 +2,5 @@ PREFIX ps: <http://www.wikidata.org/prop/statement/>
 
 SELECT ?boolean
 WHERE{
-  BIND(EXISTS{?statement0 (ps:P356) "%s".} AS ?boolean)
+  BIND(EXISTS{?statement0 (ps:P356) """%s""".} AS ?boolean)
 }
