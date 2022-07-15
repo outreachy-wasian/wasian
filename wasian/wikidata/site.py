@@ -3,7 +3,6 @@ from pywikibot.site import DataSite
 
 
 class WikidataSite:
-
     def __init__(self, code: str, fam: str):
         self.code = code
         self.fam = fam

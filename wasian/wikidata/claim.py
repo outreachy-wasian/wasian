@@ -1,8 +1,7 @@
-from pywikibot import Claim, ItemPage, DataSite
+from pywikibot import Claim, DataSite, ItemPage
 
 
 class WikidataClaim:
-
     def __init__(self, data_site: DataSite, prop: str, item: str):
         self.data_site = data_site
         self.prop = prop

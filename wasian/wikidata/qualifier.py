@@ -2,7 +2,6 @@ from pywikibot import Claim, DataSite
 
 
 class WikidataQualifier:
-
     def __init__(self, data_site: DataSite, target: object, prop: str):
         self.data_site = data_site
         self.target = target
