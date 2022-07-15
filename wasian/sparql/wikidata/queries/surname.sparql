@@ -1,0 +1,11 @@
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+# Modified SPARQL. Original credit: https://www.wikidata.org/wiki/User:Vojt%C4%9Bch_Dost%C3%A1l
+SELECT DISTINCT ?item (SAMPLE(?label) as ?itemLabel) WHERE {
+
+  ?item wdt:P31 wd:Q101352 .
+  ?item wdt:P1705 ?label .
+  FILTER (lang(?label) = 'en')
+
+} GROUP BY ?item

@@ -1,0 +1,12 @@
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+
+SELECT DISTINCT ?item ?itemLabel {
+
+  VALUES (?class) {(wd:Q112684896)}
+  ?class wdt:P3176 ?item
+  SERVICE wikibase:label { bd:serviceParam wikibase:language 'en' }
+
+} ORDER BY ASC(LCASE(?itemLabel))

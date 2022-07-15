@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RDFAndSPARQL.SPARQLEndpointManager">
+    <option name="endpoints">
+      <map>
+        <entry key="8cb2dff6-23a5-4452-aa1f-db95f73dc346">
+          <value>
+            <SPARQLEndpointConfig>
+              <option name="endpointId" value="8cb2dff6-23a5-4452-aa1f-db95f73dc346" />
+              <option name="name" value="Wikidata" />
+              <option name="queryUrl" value="https://query.wikidata.org/sparql" />
+            </SPARQLEndpointConfig>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

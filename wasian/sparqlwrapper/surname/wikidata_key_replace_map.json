@@ -1,0 +1,12 @@
+{
+  "alternate_bibcode": "bibcode",
+  "arxiv_class": "arXiv classification",
+  "author": "author name string",
+  "bibcode": "ADS bibcode",
+  "isbn": "ISBN-13",
+  "page_count": "number of pages",
+  "page_range": "page(s)",
+  "date": "publication date",
+  "pub": "published in",
+  "simbid": "SIMBAD ID"
+}
