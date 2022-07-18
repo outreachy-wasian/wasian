@@ -11,9 +11,10 @@ from yaml import safe_load
 
 sys.path.append("../../../")
 
-from pywikibot import Claim, ItemPage, WbQuantity, WbTime
+from pywikibot import Claim, ItemPage, WbMonolingualText, WbQuantity, WbTime
 from pywikibot.site import DataSite
 
+from wasian.tools.mlstripper import MLStripper
 from wasian.wikidata.item import WikidataItem
 from wasian.wikidata.site import WikidataSite
 
@@ -22,11 +23,7 @@ url_prefix = "http://www.wikidata.org/entity/"
 name_separator = ", "
 
 
-"""
-Using surnames from Wikidata as key to search articles in ADS database, import scholarly articles and create Wikidata items.
-"""
-
-
+# Using surnames from Wikidata as key to search articles in ADS database, import scholarly articles and create Wikidata items.
 def import_from_ads(
     surname_sparql_file_path: str,
     file_mode: str,
@@ -109,17 +106,22 @@ def import_from_ads(
                     print(f"{doi} already exists, don't do anything")
                 else:
                     print(f"{doi} does not exist on wikidata, creating item")
+                    # get title of article
                     title = article.title[0]
-                    # TODO: description
-                    description = (
-                        "scientific article published in January 2019"
-                    )
+                    # get date of article
+                    date = article.date
+                    # process title and description
+                    striped_title = strip_html_tags_from_title(title)
+                    print(striped_title)
+                    description = compose_description_from_date(date)
+                    print(description)
+                    # create Wikidata item
                     item = create_wikidata_item_page(
-                        "en", title, description, data_site
+                        "en", striped_title, description, data_site
                     )
                     item_id = item.getID()
                     print(item_id)
-                    search_and_add_statement(
+                    search_and_add_statement_from_ads(
                         item_id,
                         article,
                         key_map_json,
@@ -141,17 +143,21 @@ def import_from_ads(
                     print(f"{title} already exists, don't do anything")
                 else:
                     print(f"{title} does not exist on wikidata, creating item")
+                    # get title of article
                     title = article.title[0]
-                    # TODO: description
-                    description = (
-                        "scientific article published in January 2019"
-                    )
+                    # get date of article
+                    date = article.date
+                    # process title and description
+                    striped_title = strip_html_tags_from_title(title)
+                    print(striped_title)
+                    description = compose_description_from_date(date)
+                    print(description)
                     item = create_wikidata_item_page(
-                        "en", title, description, data_site
+                        "en", striped_title, description, data_site
                     )
                     item_id = item.getID()
                     print(item_id)
-                    search_and_add_statement(
+                    search_and_add_statement_from_ads(
                         item_id,
                         article,
                         key_map_json,
@@ -165,7 +171,24 @@ def import_from_ads(
                     )
 
 
-def search_and_add_statement(
+# TODO: save raw HTML as string to P6833 (title in HTML) under title before stripping
+def strip_html_tags_from_title(title):
+    s = MLStripper()
+    s.feed(title)
+    return s.get_data()
+
+
+# compose description of scholarly articles
+def compose_description_from_date(date: str) -> str:
+    if date:
+        date_time = parse(date)
+        return f"scholarly article published in {date_time.strftime('%B %Y')}"
+    else:
+        return "scholarly article"
+
+
+# Automatically search and add statements from ADS
+def search_and_add_statement_from_ads(
     item_id: str,
     article,
     key_map_json,
@@ -194,20 +217,32 @@ def search_and_add_statement(
                 fl_item_label: str = result_items["itemLabel"]["value"]
                 if fl_item_label.casefold() == key.casefold():
                     print(fl_item_id, fl_item_label, value)
+
                     # add claim to item
                     item = ItemPage(data_site, item_id)
-                    if fl_item_id == "P1104":
+
+                    # Manually add P31 (instance of) statement to wikidata item
+                    # Q13442814 is scholarly article id
+                    scholarly_article_page = ItemPage(data_site, "Q13442814")
+                    create_a_claim(
+                        data_site, "P31", scholarly_article_page, item, item_id
+                    )
+
+                    if fl_item_id == "P1476":
+                        wb_text = WbMonolingualText(text=value, language="en")
+                        create_a_claim(
+                            data_site, fl_item_id, wb_text, item, item_id
+                        )
+                    elif fl_item_id == "P1104":
+                        # Q1069725 page
+                        pages_item_page = ItemPage(data_site, "Q1069725")
                         wb_quant = WbQuantity(
                             value,
-                            ItemPage(data_site, "Q1069725"),
+                            pages_item_page,
                             site=data_site,
                         )
-                        claim = Claim(data_site, fl_item_id)
-                        claim.setTarget(wb_quant)
-                        print(claim)
-                        item.addClaim(
-                            claim,
-                            summary=f"Adding claim {fl_item_id} to {item_id}",
+                        create_a_claim(
+                            data_site, fl_item_id, wb_quant, item, item_id
                         )
                     elif fl_item_id == "P577":
                         date_time = parse(value)
@@ -216,20 +251,8 @@ def search_and_add_statement(
                             month=date_time.month,
                             site=data_site,
                         )
-                        claim = Claim(data_site, fl_item_id)
-                        claim.setTarget(wb_time)
-                        print(claim)
-                        item.addClaim(
-                            claim,
-                            summary=f"Adding claim {fl_item_id} to {item_id}",
-                        )
-                    elif fl_item_id == "P304":
-                        claim = Claim(data_site, fl_item_id)
-                        claim.setTarget(value)
-                        print(claim)
-                        item.addClaim(
-                            claim,
-                            summary=f"Adding claim {fl_item_id} to {item_id}",
+                        create_a_claim(
+                            data_site, fl_item_id, wb_time, item, item_id
                         )
                     elif fl_item_id == "P2093":
                         for index, v in enumerate(value):
@@ -261,14 +284,15 @@ def search_and_add_statement(
                                         ][0]["item"]["value"].replace(
                                             url_prefix, ""
                                         )
-                                        target = ItemPage(
+                                        author_item_page = ItemPage(
                                             data_site, author_item_id
                                         )
-                                        author_claim = Claim(data_site, "P50")
-                                        author_claim.setTarget(target)
-                                        item.addClaim(
-                                            author_claim,
-                                            summary=f'Adding claim "P50" to {item_id}',
+                                        create_a_claim(
+                                            data_site,
+                                            "P50",
+                                            author_item_page,
+                                            item,
+                                            item_id,
                                         )
                                     # orcid id not found on wikidata, but exists in ADS, create author item and add related orcid to wikidata
                                     else:
@@ -279,19 +303,27 @@ def search_and_add_statement(
                                             f"researcher, ORCID iD = {orcid_pub_list[index]}",
                                             data_site,
                                         )
-                                        print(author_item.getID())
-                                        # add instance of Q5 to author item
-                                        instance_of_claim = Claim(
-                                            data_site, "P31"
+                                        author_item_id = author_item.getID()
+                                        print(author_item_id)
+
+                                        # add instance of Q5 (human) to author item
+                                        human_item_page = ItemPage(
+                                            data_site, "Q5"
                                         )
-                                        instance_of_claim.setTarget(
-                                            ItemPage(data_site, "Q5")
+                                        create_a_claim(
+                                            data_site,
+                                            "P31",
+                                            human_item_page,
+                                            author_item,
+                                            author_item_id,
                                         )
+
                                         # split author name into first and last name
                                         author_name_split = split_author_name(
                                             v
                                         )
                                         print(author_name_split)
+
                                         # search with given name item with initials
                                         search_given_name_query = (
                                             search_item_with_instance_given_name_sparql
@@ -302,9 +334,6 @@ def search_and_add_statement(
                                         )
                                         if result["results"]["bindings"]:
                                             # add given name string claim to author item
-                                            given_name_claim = Claim(
-                                                data_site, "P735"
-                                            )
                                             given_name_item = result[
                                                 "results"
                                             ]["bindings"][0]["item"][
@@ -312,15 +341,17 @@ def search_and_add_statement(
                                             ].replace(
                                                 url_prefix, ""
                                             )
-                                            given_name_claim.setTarget(
-                                                ItemPage(
-                                                    data_site, given_name_item
-                                                )
+                                            given_name_item_page = ItemPage(
+                                                data_site, given_name_item
                                             )
-                                            author_item.addClaim(
-                                                given_name_claim,
-                                                summary=f'Adding claim "P735" to {author_item}',
+                                            create_a_claim(
+                                                data_site,
+                                                "P735",
+                                                given_name_item_page,
+                                                author_item,
+                                                author_item_id,
                                             )
+
                                         # search with family name item
                                         search_family_name_query = (
                                             search_item_with_instance_family_name_sparql
@@ -331,9 +362,6 @@ def search_and_add_statement(
                                         )
                                         if result["results"]["bindings"]:
                                             # add family name claim to author item
-                                            family_name_claim = Claim(
-                                                data_site, "P734"
-                                            )
                                             family_name_item = result[
                                                 "results"
                                             ]["bindings"][0]["item"][
@@ -341,68 +369,63 @@ def search_and_add_statement(
                                             ].replace(
                                                 url_prefix, ""
                                             )
-                                            family_name_claim.setTarget(
-                                                ItemPage(
-                                                    data_site, family_name_item
-                                                )
+                                            family_name_item_page = ItemPage(
+                                                data_site, family_name_item
                                             )
-                                            author_item.addClaim(
-                                                family_name_claim,
-                                                summary=f'Adding claim "P734" to {author_item}',
+                                            create_a_claim(
+                                                data_site,
+                                                "P734",
+                                                family_name_item_page,
+                                                author_item,
+                                                author_item_id,
                                             )
+
                                         # add orcid claim to author item
-                                        orcid_claim = Claim(data_site, "P496")
-                                        orcid_claim.setTarget(
-                                            orcid_pub_list[index]
+                                        create_a_claim(
+                                            data_site,
+                                            "P496",
+                                            orcid_pub_list[index],
+                                            author_item,
+                                            author_item_id,
                                         )
-                                        # add occupation associated to orcid
-                                        occupation_claim = Claim(
-                                            data_site, "P106"
+
+                                        # add occupation associated to orcid, Q1650915 researcher
+                                        researcher_item_page = ItemPage(
+                                            data_site, "Q1650915"
                                         )
-                                        occupation_claim.setTarget(
-                                            ItemPage(data_site, "Q1650915")
+                                        create_a_claim(
+                                            data_site,
+                                            "P106",
+                                            researcher_item_page,
+                                            author_item,
+                                            author_item_id,
                                         )
-                                        # add claims to author item
-                                        author_item.addClaim(
-                                            instance_of_claim,
-                                            summary=f'Adding claim "P31" to {author_item}',
-                                        )
-                                        author_item.addClaim(
-                                            orcid_claim,
-                                            summary=f'Adding claim "P496" to {author_item}',
-                                        )
-                                        author_item.addClaim(
-                                            occupation_claim,
-                                            summary=f'Adding claim "P106" to {author_item}',
-                                        )
+
                                         # step 2: add author item to article
-                                        target = ItemPage(
-                                            data_site, author_item.getID()
+                                        author_item_page = ItemPage(
+                                            data_site, author_item_id
                                         )
-                                        author_claim = Claim(data_site, "P50")
-                                        author_claim.setTarget(target)
-                                        item.addClaim(
-                                            author_claim,
-                                            summary=f'Adding claim "P50" to {item_id}',
+                                        create_a_claim(
+                                            data_site,
+                                            "P50",
+                                            author_item_page,
+                                            item,
+                                            item_id,
                                         )
                                 # orcid id not found in ADS, add author name string to article
                                 else:
-                                    claim = Claim(data_site, fl_item_id)
-                                    claim.setTarget(author_name)
-                                    print(claim)
-                                    item.addClaim(
-                                        claim,
-                                        summary=f"Adding claim {fl_item_id} to {item_id}",
+                                    create_a_claim(
+                                        data_site,
+                                        fl_item_id,
+                                        author_name,
+                                        item,
+                                        item_id,
                                     )
                     else:
                         if type(value) is str:
                             try:
-                                claim = Claim(data_site, fl_item_id)
-                                claim.setTarget(value)
-                                print(claim)
-                                item.addClaim(
-                                    claim,
-                                    summary=f"Adding claim {fl_item_id} to {item_id}",
+                                create_a_claim(
+                                    data_site, fl_item_id, value, item, item_id
                                 )
                             # it's a publication
                             except:
@@ -417,25 +440,38 @@ def search_and_add_statement(
                                         "item"
                                     ]["value"].replace(url_prefix, "")
                                     print(qid)
-                                    target = ItemPage(data_site, qid)
-                                    claim = Claim(data_site, fl_item_id)
-                                    claim.setTarget(target)
-                                    print(claim)
-                                    item.addClaim(
-                                        claim,
-                                        summary=f"Adding claim {fl_item_id} to {item_id}",
+                                    publication_item_page = ItemPage(
+                                        data_site, qid
+                                    )
+                                    create_a_claim(
+                                        data_site,
+                                        fl_item_id,
+                                        publication_item_page,
+                                        item,
+                                        item_id,
                                     )
                                 else:
                                     print(f"{value} not found")
                         else:
                             for v in value:
-                                claim = Claim(data_site, fl_item_id)
-                                claim.setTarget(str(v))
-                                print(claim)
-                                item.addClaim(
-                                    claim,
-                                    summary=f"Adding claim {fl_item_id} to {item_id}",
+                                create_a_claim(
+                                    data_site,
+                                    fl_item_id,
+                                    str(v),
+                                    item,
+                                    item_id,
                                 )
+
+
+# create a claim for a given item
+def create_a_claim(data_site, fl_item_id, target, item, item_id):
+    claim = Claim(data_site, fl_item_id)
+    claim.setTarget(target)
+    print(claim)
+    item.addClaim(
+        claim,
+        summary=f"Adding claim {fl_item_id} to {item_id}",
+    )
 
 
 def get_label_from_target(target, data_site):
@@ -487,7 +523,7 @@ if __name__ == "__main__":  # pragma: no cover
         "r",
         "https://raw.githubusercontent.com/adsabs/adsabs-dev-api/master/openapi/parameters.yaml",
         "../../sparql/wikidata/queries/list_of_solr_fields_on_ads.sparql",
-        "wikidata_key_replace_map.json",
+        "../surname/wikidata_key_replace_map.json",
         "../../sparql/wikidata/queries/search_if_an_item_exists.sparql",
         "../../sparql/wikidata/queries/search_if_a_doi_exists.sparql",
         "../../sparql/wikidata/queries/search_an_item_with_instance_of_family_name.sparql",
