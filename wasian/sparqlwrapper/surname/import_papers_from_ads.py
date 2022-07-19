@@ -100,12 +100,14 @@ def import_from_ads(
             if article.doi:
                 print("doi: ", article.doi)
                 doi: str = article.doi[0]
+                search_doi_query = search_doi_sparql % (doi)
                 doi_uppercase = doi.upper()
-                search_doi_query = search_doi_sparql % (doi_uppercase)
-                result = sparql_query_wrapper.query(search_doi_query)
-                print(result)
+                search_doi_uppercase_query = search_doi_sparql % (doi_uppercase)
+                doi_result = sparql_query_wrapper.query(search_doi_query)
+                doi_uppercase_result = sparql_query_wrapper.query(search_doi_uppercase_query)
                 if (
-                    result["results"]["bindings"][0]["boolean"]["value"]
+                    doi_result["results"]["bindings"][0]["boolean"]["value"]
+                    == "true" or doi_uppercase_result["results"]["bindings"][0]["boolean"]["value"]
                     == "true"
                 ):
                     print(f"{doi} already exists, don't do anything")
@@ -240,13 +242,14 @@ def search_and_add_statement_from_ads(
                 if fl_item_label.casefold() == key.casefold():
                     print(fl_item_id, fl_item_label, value)
 
+                    # TODO: add language of work or name (P407) to deal with ISSN
                     if fl_item_id == "P1476":
-                        wb_text = WbMonolingualText(text=strip_html_tags_from_title(value), language="en")
+                        wb_text = WbMonolingualText(text=strip_html_tags_from_title(value[0]), language="en")
                         claim = create_a_claim(
                             data_site, fl_item_id, wb_text, item, item_id
                         )
-                        if detect_if_title_contains_html_tag(value):
-                            wb_text_in_html = WbMonolingualText(text=value, language="en")
+                        if detect_if_title_contains_html_tag(value[0]):
+                            wb_text_in_html = WbMonolingualText(text=value[0], language="en")
                             # add P6833 (title in HTML) qualifier to P1476 (title)
                             add_qualifiers_to_claim(data_site, "P6833", wb_text_in_html, claim)
                         add_sources_to_claim(data_site, claim)
