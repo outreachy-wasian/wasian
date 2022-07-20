@@ -16,7 +16,7 @@ class WikidataItem:
         new_item = ItemPage(self.site)
         new_item.editLabels(
             labels=self.label_dict,
-            summary=f"Setting new " f"labels of item " f"{self.label_dict}",
+            summary=f"Setting new labels of item {self.label_dict}",
         )
         # Add description here or in another function
         new_item.editDescriptions(

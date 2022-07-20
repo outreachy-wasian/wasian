@@ -130,3 +130,9 @@ dmypy.json
 
 # templates
 .github/templates/*
+
+# pywikibot
+/wasian/sparqlwrapper/pywikibot/
+
+# idea
+/.idea/
