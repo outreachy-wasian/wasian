@@ -1,0 +1,11 @@
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX ps: <http://www.wikidata.org/prop/statement/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+
+SELECT DISTINCT ?item ?itemLabel
+WHERE {
+  ?item p:P236 ?statement0.
+  ?statement0 (ps:P236) """%s""".
+  SERVICE wikibase:label { bd:serviceParam wikibase:language 'en'. }
+}
