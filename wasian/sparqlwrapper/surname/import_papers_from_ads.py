@@ -21,9 +21,10 @@ from wasian.wikidata.item import WikidataItem
 from wasian.wikidata.site import WikidataSite
 
 orcid_pub_list = []
+arxiv_class_list = []
 url_prefix = "http://www.wikidata.org/entity/"
 name_separator = ", "
-
+arxiv_identifier = "arXiv"
 
 # Using surnames from Wikidata as key to search articles in ADS database, import scholarly articles and create Wikidata items.
 def import_from_ads(
@@ -32,7 +33,6 @@ def import_from_ads(
     remote_fl_url: str,
     fl_sparql_file_path: str,
     key_map_file_path: str,
-    search_item_file_path: str,
     search_doi_file_path: str,
     search_item_with_instance_family_name_file_path: str,
     search_item_with_instance_given_name_file_path: str,
@@ -40,11 +40,10 @@ def import_from_ads(
     search_ads_bibcode_file_path: str,
     search_issn_file_path: str,
 ):
-    global orcid_pub_list
+    global orcid_pub_list, arxiv_class_list
 
     fl_sparql = open(fl_sparql_file_path, file_mode).read()
     surname_sparql = open(surname_sparql_file_path, file_mode).read()
-    search_item_sparql = open(search_item_file_path, file_mode).read()
     search_doi_sparql = open(search_doi_file_path, file_mode).read()
     search_item_with_instance_family_name_sparql = open(
         search_item_with_instance_family_name_file_path, file_mode
@@ -85,17 +84,12 @@ def import_from_ads(
             first_author=f"{item_label_value}, *", fl=search_field
         )
 
-        # For test
-        # search_query: SearchQuery = SearchQuery(bibcode="1953Natur.171..737W", fl=search_field)
-
+        # connect wikidata site
         wikidata_site = WikidataSite("wikidata", "wikidata")
         data_site = wikidata_site.get_data_site()
 
         # iterate over all results
         for article in search_query:
-            if article.orcid_pub:
-                orcid_pub_list = article.orcid_pub
-                print(orcid_pub_list)
             # search doi in ADS
             if article.doi:
                 print("doi: ", article.doi)
@@ -120,26 +114,10 @@ def import_from_ads(
                     print(f"{doi} already exists, don't do anything")
                 else:
                     print(f"{doi} does not exist on wikidata, creating item")
-                    # get title of article
-                    title = article.title[0]
-                    # get date of article
-                    date = article.date
-                    # process title and description
-                    striped_title = strip_html_tags_from_title(title)
-                    print(striped_title)
-                    description = compose_description_from_date(date)
-                    print(description)
-                    item = create_wikidata_item_page(
-                        "en", striped_title, description, data_site
-                    )
-                    item_id = item.getID()
-                    print(item_id)
-                    search_and_add_statement_from_ads(
-                        item,
-                        item_id,
+                    create_article_item(
                         article,
-                        key_map_json,
                         data_site,
+                        key_map_json,
                         sparql_query_wrapper,
                         fl_sparql,
                         search_item_with_instance_given_name_sparql,
@@ -164,26 +142,10 @@ def import_from_ads(
                     print(
                         f"{ads_bibcode} does not exist on wikidata, creating item"
                     )
-                    # get title of article
-                    title = article.title[0]
-                    # get date of article
-                    date = article.date
-                    # process title and description
-                    striped_title = strip_html_tags_from_title(title)
-                    print(striped_title)
-                    description = compose_description_from_date(date)
-                    print(description)
-                    item = create_wikidata_item_page(
-                        "en", striped_title, description, data_site
-                    )
-                    item_id = item.getID()
-                    print(item_id)
-                    search_and_add_statement_from_ads(
-                        item,
-                        item_id,
+                    create_article_item(
                         article,
-                        key_map_json,
                         data_site,
+                        key_map_json,
                         sparql_query_wrapper,
                         fl_sparql,
                         search_item_with_instance_given_name_sparql,
@@ -191,6 +153,55 @@ def import_from_ads(
                         search_issn_sparql,
                         search_orcid_id_sparql,
                     )
+
+
+# create item about scholarly articles
+def create_article_item(
+    article,
+    data_site,
+    key_map_json,
+    sparql_query_wrapper,
+    fl_sparql,
+    search_item_with_instance_given_name_sparql,
+    search_item_with_instance_family_name_sparql,
+    search_issn_sparql,
+    search_orcid_id_sparql,
+):
+    # get orcid id to list
+    if article.orcid_pub:
+        orcid_pub_list = article.orcid_pub
+        print(orcid_pub_list)
+    # get arxiv classification to list
+    if article.arxiv_class:
+        arxiv_class_list = article.arxiv_class
+        print(arxiv_class_list)
+    # get title of article
+    title = article.title[0]
+    # get date of article
+    date = article.date
+    # process title and description
+    striped_title = strip_html_tags_from_title(title)
+    print(striped_title)
+    description = compose_description_from_date(date)
+    print(description)
+    item = create_wikidata_item_page(
+        "en", striped_title, description, data_site
+    )
+    item_id = item.getID()
+    print(item_id)
+    search_and_add_statement_from_ads(
+        item,
+        item_id,
+        article,
+        key_map_json,
+        data_site,
+        sparql_query_wrapper,
+        fl_sparql,
+        search_item_with_instance_given_name_sparql,
+        search_item_with_instance_family_name_sparql,
+        search_issn_sparql,
+        search_orcid_id_sparql,
+    )
 
 
 # detect_if_title_contains_html_tag
@@ -251,7 +262,30 @@ def search_and_add_statement_from_ads(
                 if fl_item_label.casefold() == key.casefold():
                     print(fl_item_id, fl_item_label, value)
 
-                    if fl_item_id == "P236":
+                    if fl_item_id == "P818":
+                        arxiv_ids = filter_arxiv_ids_from_alternate_bibcodes(
+                            value
+                        )
+                        # lists all arxiv ids, though expecting only one is used
+                        for arxiv_id in arxiv_ids:
+                            arxiv_digits = extract_arxiv_digits_from_arxiv_id(
+                                arxiv_id
+                            )
+                            print(f"arXiv ID: {arxiv_digits}")
+                            claim = create_a_claim(
+                                data_site,
+                                fl_item_id,
+                                arxiv_digits,
+                                item,
+                                item_id,
+                            )
+                            # add arxiv classification to P820, there might be multiple classes in one arxiv id
+                            for arxiv_class in arxiv_class_list:
+                                add_qualifiers_to_claim(
+                                    data_site, "P820", arxiv_class, claim
+                                )
+                            add_sources_to_claim(data_site, claim)
+                    elif fl_item_id == "P236":
                         for v in value:
                             issn_query = search_issn_sparql % (v)
                             result = sparql_query_wrapper.query(issn_query)
@@ -534,6 +568,30 @@ def search_and_add_statement_from_ads(
                                 add_sources_to_claim(data_site, claim)
 
 
+# extract arxiv id from arxiv string
+def extract_arxiv_digits_from_arxiv_id(arxiv_ids: str) -> str:
+    # split to lists
+    digits_lists = arxiv_ids.split(arxiv_identifier)
+    # get the second list
+    arxiv_id = digits_lists[1]
+    # remove the last character
+    arxiv_id_digits = arxiv_id[:-1]
+    if "." not in arxiv_id_digits:
+        # it's 5 digits string
+        # joining string at position 4
+        new_arxiv_id_digits = "{0}.{1}".format(
+            arxiv_id_digits[:4], arxiv_id_digits[4:]
+        )
+        return new_arxiv_id_digits
+    else:
+        return arxiv_id_digits
+
+
+# filter arXiv ids from bibcodes
+def filter_arxiv_ids_from_alternate_bibcodes(bibcodes):
+    return list(filter(lambda bibcode: arxiv_identifier in bibcode, bibcodes))
+
+
 # add qualifiers to author string
 def add_qualifiers_to_author_string(
     data_site, index, author_given_names, author_last_names, claim
@@ -593,12 +651,12 @@ def add_sources_to_claim(data_site, claim):
         data_site, "P813"
     )  # retrieved (P813). Data type: Point in time
     today = date.today()  # Date today
-    dateCre = WbTime(
+    date_created = WbTime(
         year=int(today.strftime("%Y")),
         month=int(today.strftime("%m")),
         day=int(today.strftime("%d")),
     )  # retrieved -> %DATE TODAY%.
-    retrieved.setTarget(dateCre)  # Inserting value
+    retrieved.setTarget(date_created)  # Inserting value
 
     claim.addSources(
         [ref, retrieved], summary=f"Adding sources P248 and P813 to claim."
@@ -671,7 +729,6 @@ if __name__ == "__main__":  # pragma: no cover
         "https://raw.githubusercontent.com/adsabs/adsabs-dev-api/master/openapi/parameters.yaml",
         "../../sparql/wikidata/queries/list_of_solr_fields_on_ads.sparql",
         "../surname/wikidata_key_replace_map.json",
-        "../../sparql/wikidata/queries/search_if_an_item_exists.sparql",
         "../../sparql/wikidata/queries/search_if_a_doi_exists.sparql",
         "../../sparql/wikidata/queries/search_an_item_with_instance_of_family_name.sparql",
         "../../sparql/wikidata/queries/search_an_item_with_instance_of_given_name.sparql",
