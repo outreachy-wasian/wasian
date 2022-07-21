@@ -1,6 +1,5 @@
 {
-  "alternate_bibcode": "bibcode",
-  "arxiv_class": "arXiv classification",
+  "alternate_bibcode": "arXiv ID",
   "author": "author name string",
   "bibcode": "ADS bibcode",
   "isbn": "ISBN-13",
