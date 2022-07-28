@@ -22,9 +22,12 @@ from wasian.wikidata.site import WikidataSite
 
 orcid_pub_list = []
 arxiv_class_list = []
+affiliation_list = []
 url_prefix = "http://www.wikidata.org/entity/"
 name_separator = ", "
 arxiv_identifier = "arXiv"
+affiliation_separator = "; "
+empty_value = "-"
 
 # Using surnames from Wikidata as key to search articles in ADS database, import scholarly articles and create Wikidata items.
 def import_from_ads(
@@ -40,7 +43,7 @@ def import_from_ads(
     search_ads_bibcode_file_path: str,
     search_issn_file_path: str,
 ):
-    global orcid_pub_list, arxiv_class_list
+    global orcid_pub_list, arxiv_class_list, affiliation_list
 
     fl_sparql = open(fl_sparql_file_path, file_mode).read()
     surname_sparql = open(surname_sparql_file_path, file_mode).read()
@@ -90,6 +93,18 @@ def import_from_ads(
 
         # iterate over all results
         for article in search_query:
+            # get orcid id to list
+            if article.orcid_pub:
+                orcid_pub_list = article.orcid_pub
+                print(f"public orcid id list: {orcid_pub_list}")
+            # get affiliation string to list
+            if article.aff:
+                affiliation_list = article.aff
+                print(f"affiliation list: {affiliation_list}")
+            # get arxiv classification to list
+            if article.arxiv_class:
+                arxiv_class_list = article.arxiv_class
+                print(f"arxiv class list: {arxiv_class_list}")
             # search doi in ADS
             if article.doi:
                 print("doi: ", article.doi)
@@ -167,28 +182,20 @@ def create_article_item(
     search_issn_sparql,
     search_orcid_id_sparql,
 ):
-    # get orcid id to list
-    if article.orcid_pub:
-        orcid_pub_list = article.orcid_pub
-        print(orcid_pub_list)
-    # get arxiv classification to list
-    if article.arxiv_class:
-        arxiv_class_list = article.arxiv_class
-        print(arxiv_class_list)
     # get title of article
     title = article.title[0]
     # get date of article
     date = article.date
     # process title and description
     striped_title = strip_html_tags_from_title(title)
-    print(striped_title)
+    print(f"title: {striped_title}")
     description = compose_description_from_date(date)
-    print(description)
+    print(f"description: {description}")
     item = create_wikidata_item_page(
         "en", striped_title, description, data_site
     )
     item_id = item.getID()
-    print(item_id)
+    print(f"new article item: {url_prefix}{item_id}")
     search_and_add_statement_from_ads(
         item,
         item_id,
@@ -262,6 +269,9 @@ def search_and_add_statement_from_ads(
                 if fl_item_label.casefold() == key.casefold():
                     print(fl_item_id, fl_item_label, value)
 
+                    # get bibcode from ADS
+                    bibcode: str = article.bibcode
+
                     if fl_item_id == "P818":
                         arxiv_ids = filter_arxiv_ids_from_alternate_bibcodes(
                             value
@@ -284,7 +294,13 @@ def search_and_add_statement_from_ads(
                                 add_qualifiers_to_claim(
                                     data_site, "P820", arxiv_class, claim
                                 )
-                            add_sources_to_claim(data_site, claim)
+                            # add sources to claim
+                            article_sources = (
+                                construct_sources_to_article_claim(
+                                    data_site, bibcode
+                                )
+                            )
+                            add_sources_to_claim(article_sources, claim)
                     elif fl_item_id == "P236":
                         for v in value:
                             issn_query = search_issn_sparql % (v)
@@ -294,7 +310,9 @@ def search_and_add_statement_from_ads(
                                 journal_item_id = result["results"][
                                     "bindings"
                                 ][0]["item"]["value"].replace(url_prefix, "")
-                                print(journal_item_id)
+                                print(
+                                    f"journal item id: {url_prefix}{journal_item_id}"
+                                )
                                 journal_item_page = ItemPage(
                                     data_site, journal_item_id
                                 )
@@ -305,8 +323,14 @@ def search_and_add_statement_from_ads(
                                     item,
                                     item_id,
                                 )
+                                # add sources to claim
+                                article_sources = (
+                                    construct_sources_to_article_claim(
+                                        data_site, bibcode
+                                    )
+                                )
                                 add_sources_to_claim(
-                                    data_site, published_in_claim
+                                    article_sources, published_in_claim
                                 )
                     elif fl_item_id == "P1476":
                         wb_text = WbMonolingualText(
@@ -324,7 +348,11 @@ def search_and_add_statement_from_ads(
                             add_qualifiers_to_claim(
                                 data_site, "P6833", wb_text_in_html, claim
                             )
-                        add_sources_to_claim(data_site, claim)
+                        # add sources to claim
+                        article_sources = construct_sources_to_article_claim(
+                            data_site, bibcode
+                        )
+                        add_sources_to_claim(article_sources, claim)
                     elif fl_item_id == "P1104":
                         # Q1069725 page item
                         pages_item_page = ItemPage(data_site, "Q1069725")
@@ -336,7 +364,11 @@ def search_and_add_statement_from_ads(
                         claim = create_a_claim(
                             data_site, fl_item_id, wb_quant, item, item_id
                         )
-                        add_sources_to_claim(data_site, claim)
+                        # add sources to claim
+                        article_sources = construct_sources_to_article_claim(
+                            data_site, bibcode
+                        )
+                        add_sources_to_claim(article_sources, claim)
                     elif fl_item_id == "P577":
                         date_time = parse(value)
                         wb_time = WbTime(
@@ -347,7 +379,11 @@ def search_and_add_statement_from_ads(
                         claim = create_a_claim(
                             data_site, fl_item_id, wb_time, item, item_id
                         )
-                        add_sources_to_claim(data_site, claim)
+                        # add sources to claim
+                        article_sources = construct_sources_to_article_claim(
+                            data_site, bibcode
+                        )
+                        add_sources_to_claim(article_sources, claim)
                     elif fl_item_id == "P2093":
                         for index, v in enumerate(value):
                             # skip if there are other strings e.g. collaboration
@@ -361,7 +397,7 @@ def search_and_add_statement_from_ads(
                                 author_last_names = get_author_last_names(v)
 
                                 # try to look at orcid
-                                if orcid_pub_list[index] != "-":
+                                if orcid_pub_list[index] != empty_value:
                                     print(author_name, orcid_pub_list[index])
 
                                     # search if an orcid id exists on wikidata
@@ -372,7 +408,6 @@ def search_and_add_statement_from_ads(
                                     result = sparql_query_wrapper.query(
                                         search_orcid_query
                                     )
-                                    print(result)
 
                                     # found orcid id on wikidata, add author statement to article
                                     if result["results"]["bindings"]:
@@ -396,12 +431,21 @@ def search_and_add_statement_from_ads(
                                         add_qualifiers_to_author_item(
                                             data_site,
                                             index,
+                                            affiliation_list[index],
                                             author_name,
                                             author_given_names,
                                             author_last_names,
                                             claim,
                                         )
-                                        add_sources_to_claim(data_site, claim)
+                                        # add sources to claim
+                                        article_sources = (
+                                            construct_sources_to_article_claim(
+                                                data_site, bibcode
+                                            )
+                                        )
+                                        add_sources_to_claim(
+                                            article_sources, claim
+                                        )
                                     # orcid id not found on wikidata, but exists in ADS, create author item and add related orcid to wikidata
                                     else:
                                         # step 1: create author item
@@ -412,7 +456,9 @@ def search_and_add_statement_from_ads(
                                             data_site,
                                         )
                                         author_item_id = author_item.getID()
-                                        print(author_item_id)
+                                        print(
+                                            f"new author item: {url_prefix}{author_item_id}"
+                                        )
 
                                         # add instance of Q5 (human) to author item
                                         human_item_page = ItemPage(
@@ -453,8 +499,13 @@ def search_and_add_statement_from_ads(
                                                 author_item,
                                                 author_item_id,
                                             )
+                                            # add source of given name to author item
+                                            author_sources = construct_sources_to_author_claim(
+                                                data_site
+                                            )
                                             add_sources_to_claim(
-                                                data_site, given_name_claim
+                                                author_sources,
+                                                given_name_claim,
                                             )
 
                                         # search with family name item
@@ -484,8 +535,13 @@ def search_and_add_statement_from_ads(
                                                 author_item,
                                                 author_item_id,
                                             )
+                                            # add source of family name to author item
+                                            author_sources = construct_sources_to_author_claim(
+                                                data_site
+                                            )
                                             add_sources_to_claim(
-                                                data_site, family_name_claim
+                                                author_sources,
+                                                family_name_claim,
                                             )
 
                                         # add orcid claim to author item
@@ -497,8 +553,13 @@ def search_and_add_statement_from_ads(
                                             author_item_id,
                                         )
                                         # add source of orcid to author item
+                                        author_sources = (
+                                            construct_sources_to_author_claim(
+                                                data_site
+                                            )
+                                        )
                                         add_sources_to_claim(
-                                            data_site, orcid_claim
+                                            author_sources, orcid_claim
                                         )
 
                                         # add occupation associated to orcid, Q1650915 researcher
@@ -527,12 +588,21 @@ def search_and_add_statement_from_ads(
                                         add_qualifiers_to_author_item(
                                             data_site,
                                             index,
+                                            affiliation_list[index],
                                             author_name,
                                             author_given_names,
                                             author_last_names,
                                             claim,
                                         )
-                                        add_sources_to_claim(data_site, claim)
+                                        # add sources to claim
+                                        article_sources = (
+                                            construct_sources_to_article_claim(
+                                                data_site, bibcode
+                                            )
+                                        )
+                                        add_sources_to_claim(
+                                            article_sources, claim
+                                        )
                                 # orcid id not found in ADS, add author name string to article
                                 else:
                                     claim = create_a_claim(
@@ -545,17 +615,32 @@ def search_and_add_statement_from_ads(
                                     add_qualifiers_to_author_string(
                                         data_site,
                                         index,
+                                        affiliation_list[index],
                                         author_given_names,
                                         author_last_names,
                                         claim,
                                     )
-                                    add_sources_to_claim(data_site, claim)
+                                    # add sources to claim
+                                    article_sources = (
+                                        construct_sources_to_article_claim(
+                                            data_site, bibcode
+                                        )
+                                    )
+                                    add_sources_to_claim(
+                                        article_sources, claim
+                                    )
                     else:
                         if type(value) is str:
                             claim = create_a_claim(
                                 data_site, fl_item_id, value, item, item_id
                             )
-                            add_sources_to_claim(data_site, claim)
+                            # add sources to claim
+                            article_sources = (
+                                construct_sources_to_article_claim(
+                                    data_site, bibcode
+                                )
+                            )
+                            add_sources_to_claim(article_sources, claim)
                         else:
                             for v in value:
                                 claim = create_a_claim(
@@ -565,7 +650,13 @@ def search_and_add_statement_from_ads(
                                     item,
                                     item_id,
                                 )
-                                add_sources_to_claim(data_site, claim)
+                                # add sources to claim
+                                article_sources = (
+                                    construct_sources_to_article_claim(
+                                        data_site, bibcode
+                                    )
+                                )
+                                add_sources_to_claim(article_sources, claim)
 
 
 # extract arxiv id from arxiv string
@@ -594,7 +685,7 @@ def filter_arxiv_ids_from_alternate_bibcodes(bibcodes):
 
 # add qualifiers to author string
 def add_qualifiers_to_author_string(
-    data_site, index, author_given_names, author_last_names, claim
+    data_site, index, affiliation, author_given_names, author_last_names, claim
 ):
     # add serials ordinal P1545
     add_qualifiers_to_claim(data_site, "P1545", str(index + 1), claim)
@@ -602,24 +693,60 @@ def add_qualifiers_to_author_string(
     add_qualifiers_to_claim(data_site, "P9687", author_given_names, claim)
     # add author last names P9688
     add_qualifiers_to_claim(data_site, "P9688", author_last_names, claim)
+    # add affiliation P6424 to author if it's not empty
+    if affiliation != empty_value:
+        if affiliation_separator in affiliation:
+            # split affiliation to list
+            affiliation_list = affiliation.split(affiliation_separator)
+            for affiliations in affiliation_list:
+                # strip the string
+                striped_affiliations = affiliations.strip()
+                # add affiliation to author
+                add_qualifiers_to_claim(
+                    data_site, "P6424", striped_affiliations, claim
+                )
+        else:
+            # strip the string
+            striped_affiliation = affiliation.strip()
+            # add affiliation to author
+            add_qualifiers_to_claim(
+                data_site, "P6424", striped_affiliation, claim
+            )
 
 
 # add qualifiers to author item
 def add_qualifiers_to_author_item(
-    data_site, index, author_name, author_given_names, author_last_names, claim
+    data_site,
+    index,
+    affiliation,
+    author_name,
+    author_given_names,
+    author_last_names,
+    claim,
 ):
     add_qualifiers_to_author_string(
-        data_site, index, author_given_names, author_last_names, claim
+        data_site,
+        index,
+        affiliation,
+        author_given_names,
+        author_last_names,
+        claim,
     )
     # add object stated as (P1932) from source of name in ADS database
     add_qualifiers_to_claim(data_site, "P1932", author_name, claim)
 
 
+# construct a claim
+def construct_a_claim(data_site, prop, target) -> Claim:
+    claim = Claim(data_site, prop)
+    claim.setTarget(target)
+    return claim
+
+
 # create a claim for a given item
 def create_a_claim(data_site, fl_item_id, target, item, item_id) -> Claim:
-    claim = Claim(data_site, fl_item_id)
-    claim.setTarget(target)
-    print(claim)
+    claim = construct_a_claim(data_site, fl_item_id, target)
+    print(f"claim: {claim}")
     item.addClaim(
         claim,
         summary=f"Adding claim {fl_item_id} to {item_id}",
@@ -629,46 +756,47 @@ def create_a_claim(data_site, fl_item_id, target, item, item_id) -> Claim:
 
 # add qualifiers to a given claim
 def add_qualifiers_to_claim(data_site, qualifier_id, target, claim):
-    qualifier = Claim(data_site, qualifier_id)
-    qualifier.setTarget(target)
-    print(qualifier)
+    qualifier = construct_a_claim(data_site, qualifier_id, target)
+    print(f"qualifier: {qualifier}")
     claim.addQualifier(
         qualifier, summary=f"Adding a qualifier {qualifier_id}."
     )
 
 
-# add stated in (P248) and retrieved (P813) to every claim
-def add_sources_to_claim(data_site, claim):
-    # stated in
-    ref = Claim(data_site, "P248")  # stated in (P248)
-    ads_item_page = ItemPage(data_site, "Q752099")  # ADS item
-    ref.setTarget(
-        ads_item_page
-    )  # Connecting P248 with ADS (Q752099), that is a Q-id.
+# add sources to a given claim
+def add_sources_to_claim(sources, claim):
+    print(f"sources: {sources}")
+    # add sources to a claim
+    claim.addSources(sources, summary=f"Adding sources to claim.")
 
-    # retrieved
-    retrieved = Claim(
-        data_site, "P813"
-    )  # retrieved (P813). Data type: Point in time
+
+# construct stated in (P248) and retrieved (P813) to author claim
+def construct_sources_to_author_claim(data_site) -> list:
+    # stated in (P248)
+    target = ItemPage(data_site, "Q752099")  # ADS item
+    stated_in = construct_a_claim(data_site, "P248", target)
+
+    # retrieved (P813). Data type: Point in time
     today = date.today()  # Date today
     date_created = WbTime(
         year=int(today.strftime("%Y")),
         month=int(today.strftime("%m")),
         day=int(today.strftime("%d")),
     )  # retrieved -> %DATE TODAY%.
-    retrieved.setTarget(date_created)  # Inserting value
+    retrieved = construct_a_claim(data_site, "P813", date_created)
 
-    claim.addSources(
-        [ref, retrieved], summary=f"Adding sources P248 and P813 to claim."
-    )
+    author_claim_sources = [stated_in, retrieved]
+    return author_claim_sources
 
 
-def get_label_from_target(target, data_site):
-    # get item title from target
-    title = target.title()
-    title_page = ItemPage(data_site, title)
-    target_label = title_page.get()["labels"]["en"]
-    return target_label
+# construct stated in (P248), retrieved (P813) and ADS bibcode (P819) to article claim
+def construct_sources_to_article_claim(data_site, bibcode) -> list:
+    author_claim_sources: list = construct_sources_to_author_claim(data_site)
+    # ADS bibcode (P819)
+    ads_bibcode = construct_a_claim(data_site, "P819", bibcode)
+    # join ADS bibcode with author claim sources to form article claim sources
+    article_claim_sources = author_claim_sources + [ads_bibcode]
+    return article_claim_sources
 
 
 def create_wikidata_item_page(
@@ -677,15 +805,6 @@ def create_wikidata_item_page(
     wikidata_item = WikidataItem(data_site, {lang: title}, {lang: description})
     new_item_page = wikidata_item.create_item_page()
     return new_item_page
-
-
-def add_affiliation_to_author_item(author_item_id, affiliation, item_id):
-    wikidata_site = WikidataSite("wikidata", "wikidata")
-    data_site = wikidata_site.get_data_site()
-    item = ItemPage(data_site, author_item_id)
-    claim = Claim(data_site, "P2093")
-    claim.setTarget(affiliation)
-    item.addClaim(claim, summary=f'Adding claim "P2093" to {item_id}')
 
 
 def get_author_given_names(author) -> str:
@@ -724,10 +843,10 @@ def split_author_name(author) -> list:
 
 if __name__ == "__main__":  # pragma: no cover
     import_from_ads(
-        "../../sparql/wikidata/queries/surname.sparql",
+        "../../sparql/wikidata/queries/query_surname_in_english.sparql",
         "r",
         "https://raw.githubusercontent.com/adsabs/adsabs-dev-api/master/openapi/parameters.yaml",
-        "../../sparql/wikidata/queries/list_of_solr_fields_on_ads.sparql",
+        "../../sparql/wikidata/queries/query_list_of_solr_fields_on_ads.sparql",
         "../surname/wikidata_key_replace_map.json",
         "../../sparql/wikidata/queries/search_if_a_doi_exists.sparql",
         "../../sparql/wikidata/queries/search_an_item_with_instance_of_family_name.sparql",

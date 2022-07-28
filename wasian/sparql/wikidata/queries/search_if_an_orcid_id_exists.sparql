@@ -3,8 +3,8 @@ PREFIX bd: <http://www.bigdata.com/rdf#>
 PREFIX p: <http://www.wikidata.org/prop/>
 PREFIX ps: <http://www.wikidata.org/prop/statement/>
 
-SELECT DISTINCT ?item ?itemLabel WHERE {
+SELECT DISTINCT ?item
+WHERE {
   ?item p:P496 ?statement0.
   ?statement0 (ps:P496) """%s""".
-  SERVICE wikibase:label { bd:serviceParam wikibase:language """en""". }
 }
