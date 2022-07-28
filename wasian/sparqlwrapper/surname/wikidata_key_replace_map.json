@@ -2,9 +2,7 @@
   "alternate_bibcode": "arXiv ID",
   "author": "author name string",
   "bibcode": "ADS bibcode",
-  "isbn": "ISBN-13",
   "page_count": "number of pages",
   "page_range": "page(s)",
-  "date": "publication date",
-  "simbid": "SIMBAD ID"
+  "date": "publication date"
 }

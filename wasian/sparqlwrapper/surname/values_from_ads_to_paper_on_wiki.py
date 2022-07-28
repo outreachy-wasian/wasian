@@ -732,10 +732,10 @@ def sub_hyphen_in_pages(sub_str):
 
 if __name__ == "__main__":  # pragma: no cover
     get_surnames(
-        "../../sparql/wikidata/queries/surname.sparql",
+        "../../sparql/wikidata/queries/query_surname_in_english.sparql",
         "r",
         "https://raw.githubusercontent.com/adsabs/adsabs-dev-api/master/openapi/parameters.yaml",
-        "../../../sparql/wikidata/queries/list_of_solr_fields_on_ads.sparql",
+        "../../../sparql/wikidata/queries/query_list_of_solr_fields_on_ads.sparql",
         "../wikidata_key_replace_map.json",
         "../../../sparql/wikidata/queries/search_if_an_item_exists.sparql",
         "../../../sparql/wikidata/queries/search_if_a_doi_exists.sparql",
