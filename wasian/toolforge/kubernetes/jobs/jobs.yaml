@@ -1,0 +1,11 @@
+# At $HOME directory of wasian tools on toolforge server: https://toolsadmin.wikimedia.org/tools/id/wasian
+# https://wikitech.wikimedia.org/wiki/Help:Toolforge/Jobs_framework
+---
+# a cronjob
+- name: adsbot-english-paper-everymonth
+  command: $HOME/run_adsbot_english_paper_venv.sh
+  image: tf-python39
+  mem: 4Gi
+  cpu: 1
+  schedule: "0 7 3 * *" # At 07:00 on day-of-month 3.
+  emails: all
