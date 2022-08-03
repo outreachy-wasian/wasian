@@ -20,9 +20,6 @@ from wasian.tools.mlstripper import MLStripper
 from wasian.wikidata.item import WikidataItem
 from wasian.wikidata.site import WikidataSite
 
-orcid_pub_list = []
-arxiv_class_list = []
-affiliation_list = []
 url_prefix = "http://www.wikidata.org/entity/"
 name_separator = ", "
 arxiv_identifier = "arXiv"
@@ -43,8 +40,7 @@ def import_from_ads(
     search_ads_bibcode_file_path: str,
     search_issn_file_path: str,
 ):
-    global orcid_pub_list, arxiv_class_list, affiliation_list
-
+    # read sparql files
     fl_sparql = open(fl_sparql_file_path, file_mode).read()
     surname_sparql = open(surname_sparql_file_path, file_mode).read()
     search_doi_sparql = open(search_doi_file_path, file_mode).read()
@@ -93,18 +89,6 @@ def import_from_ads(
 
         # iterate over all results
         for article in search_query:
-            # get orcid id to list
-            if article.orcid_pub:
-                orcid_pub_list = article.orcid_pub
-                print(f"public orcid id list: {orcid_pub_list}")
-            # get affiliation string to list
-            if article.aff:
-                affiliation_list = article.aff
-                print(f"affiliation list: {affiliation_list}")
-            # get arxiv classification to list
-            if article.arxiv_class:
-                arxiv_class_list = article.arxiv_class
-                print(f"arxiv class list: {arxiv_class_list}")
             # search doi in ADS
             if article.doi:
                 print("doi: ", article.doi)
@@ -129,6 +113,11 @@ def import_from_ads(
                     print(f"{doi} already exists, don't do anything")
                 else:
                     print(f"{doi} does not exist on wikidata, creating item")
+                    (
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
+                    ) = define_refreshable_lists(article)
                     create_article_item(
                         article,
                         data_site,
@@ -139,6 +128,9 @@ def import_from_ads(
                         search_item_with_instance_family_name_sparql,
                         search_issn_sparql,
                         search_orcid_id_sparql,
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
                     )
             # if doi isn't available in ADS, search ADS bibcode in ADS database
             else:
@@ -157,6 +149,11 @@ def import_from_ads(
                     print(
                         f"{ads_bibcode} does not exist on wikidata, creating item"
                     )
+                    (
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
+                    ) = define_refreshable_lists(article)
                     create_article_item(
                         article,
                         data_site,
@@ -167,6 +164,9 @@ def import_from_ads(
                         search_item_with_instance_family_name_sparql,
                         search_issn_sparql,
                         search_orcid_id_sparql,
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
                     )
 
 
@@ -181,6 +181,9 @@ def create_article_item(
     search_item_with_instance_family_name_sparql,
     search_issn_sparql,
     search_orcid_id_sparql,
+    orcid_pub_list,
+    affiliation_list,
+    arxiv_class_list,
 ):
     # get title of article
     title = article.title[0]
@@ -208,6 +211,9 @@ def create_article_item(
         search_item_with_instance_family_name_sparql,
         search_issn_sparql,
         search_orcid_id_sparql,
+        orcid_pub_list,
+        affiliation_list,
+        arxiv_class_list,
     )
 
 
@@ -232,6 +238,27 @@ def compose_description_from_date(date: str) -> str:
         return "scholarly article"
 
 
+# define refreshable lists
+def define_refreshable_lists(article):
+    # define refreshable lists
+    orcid_pub_list = []
+    affiliation_list = []
+    arxiv_class_list = []
+    # get orcid id to list
+    if article.orcid_pub:
+        orcid_pub_list = article.orcid_pub
+        print(f"public orcid id list: {orcid_pub_list}")
+    # get affiliation string to list
+    if article.aff:
+        affiliation_list = article.aff
+        print(f"affiliation list: {affiliation_list}")
+    # get arxiv classification to list
+    if article.arxiv_class:
+        arxiv_class_list = article.arxiv_class
+        print(f"arxiv class list: {arxiv_class_list}")
+    return orcid_pub_list, affiliation_list, arxiv_class_list
+
+
 # Automatically search and add statements from ADS
 def search_and_add_statement_from_ads(
     item: ItemPage,
@@ -245,6 +272,9 @@ def search_and_add_statement_from_ads(
     search_item_with_instance_family_name_sparql,
     search_issn_sparql,
     search_orcid_id_sparql,
+    orcid_pub_list,
+    affiliation_list,
+    arxiv_class_list,
 ):
     # Manually add P31 (instance of) statement to wikidata item
     # Q13442814 is scholarly article id
@@ -397,7 +427,10 @@ def search_and_add_statement_from_ads(
                                 author_last_names = get_author_last_names(v)
 
                                 # try to look at orcid
-                                if orcid_pub_list and orcid_pub_list[index] != empty_value:
+                                if (
+                                    orcid_pub_list
+                                    and orcid_pub_list[index] != empty_value
+                                ):
                                     print(author_name, orcid_pub_list[index])
 
                                     # search if an orcid id exists on wikidata
@@ -685,7 +718,12 @@ def filter_arxiv_ids_from_alternate_bibcodes(bibcodes):
 
 # add qualifiers to author string
 def add_qualifiers_to_author_string(
-    data_site, index, affiliation_lists, author_given_names, author_last_names, claim
+    data_site,
+    index,
+    affiliation_lists,
+    author_given_names,
+    author_last_names,
+    claim,
 ):
     # add serials ordinal P1545
     add_qualifiers_to_claim(data_site, "P1545", str(index + 1), claim)
@@ -698,7 +736,9 @@ def add_qualifiers_to_author_string(
         affiliation = affiliation_lists[index]
         if affiliation_separator in affiliation:
             # split affiliation to list
-            affiliation_list_of_author = affiliation.split(affiliation_separator)
+            affiliation_list_of_author = affiliation.split(
+                affiliation_separator
+            )
             for affiliations in affiliation_list_of_author:
                 # strip the string
                 striped_affiliations = affiliations.strip()
