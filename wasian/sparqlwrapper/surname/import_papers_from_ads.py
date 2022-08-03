@@ -397,7 +397,7 @@ def search_and_add_statement_from_ads(
                                 author_last_names = get_author_last_names(v)
 
                                 # try to look at orcid
-                                if orcid_pub_list[index] != empty_value:
+                                if orcid_pub_list and orcid_pub_list[index] != empty_value:
                                     print(author_name, orcid_pub_list[index])
 
                                     # search if an orcid id exists on wikidata
@@ -431,7 +431,7 @@ def search_and_add_statement_from_ads(
                                         add_qualifiers_to_author_item(
                                             data_site,
                                             index,
-                                            affiliation_list[index],
+                                            affiliation_list,
                                             author_name,
                                             author_given_names,
                                             author_last_names,
@@ -588,7 +588,7 @@ def search_and_add_statement_from_ads(
                                         add_qualifiers_to_author_item(
                                             data_site,
                                             index,
-                                            affiliation_list[index],
+                                            affiliation_list,
                                             author_name,
                                             author_given_names,
                                             author_last_names,
@@ -615,7 +615,7 @@ def search_and_add_statement_from_ads(
                                     add_qualifiers_to_author_string(
                                         data_site,
                                         index,
-                                        affiliation_list[index],
+                                        affiliation_list,
                                         author_given_names,
                                         author_last_names,
                                         claim,
@@ -685,7 +685,7 @@ def filter_arxiv_ids_from_alternate_bibcodes(bibcodes):
 
 # add qualifiers to author string
 def add_qualifiers_to_author_string(
-    data_site, index, affiliation, author_given_names, author_last_names, claim
+    data_site, index, affiliation_lists, author_given_names, author_last_names, claim
 ):
     # add serials ordinal P1545
     add_qualifiers_to_claim(data_site, "P1545", str(index + 1), claim)
@@ -694,11 +694,12 @@ def add_qualifiers_to_author_string(
     # add author last names P9688
     add_qualifiers_to_claim(data_site, "P9688", author_last_names, claim)
     # add affiliation P6424 to author if it's not empty
-    if affiliation != empty_value:
+    if affiliation_lists and affiliation_lists[index] != empty_value:
+        affiliation = affiliation_lists[index]
         if affiliation_separator in affiliation:
             # split affiliation to list
-            affiliation_list = affiliation.split(affiliation_separator)
-            for affiliations in affiliation_list:
+            affiliation_list_of_author = affiliation.split(affiliation_separator)
+            for affiliations in affiliation_list_of_author:
                 # strip the string
                 striped_affiliations = affiliations.strip()
                 # add affiliation to author
@@ -718,7 +719,7 @@ def add_qualifiers_to_author_string(
 def add_qualifiers_to_author_item(
     data_site,
     index,
-    affiliation,
+    affiliation_lists,
     author_name,
     author_given_names,
     author_last_names,
@@ -727,7 +728,7 @@ def add_qualifiers_to_author_item(
     add_qualifiers_to_author_string(
         data_site,
         index,
-        affiliation,
+        affiliation_lists,
         author_given_names,
         author_last_names,
         claim,
