@@ -113,20 +113,24 @@ def import_from_ads(
                     print(f"{doi} already exists, don't do anything")
                 else:
                     print(f"{doi} does not exist on wikidata, creating item")
-                    orcid_pub_list, affiliation_list, arxiv_class_list = define_refreshable_lists(article)
+                    (
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
+                    ) = define_refreshable_lists(article)
                     create_article_item(
-                            article,
-                            data_site,
-                            key_map_json,
-                            sparql_query_wrapper,
-                            fl_sparql,
-                            search_item_with_instance_given_name_sparql,
-                            search_item_with_instance_family_name_sparql,
-                            search_issn_sparql,
-                            search_orcid_id_sparql,
-                            orcid_pub_list,
-                            affiliation_list,
-                            arxiv_class_list
+                        article,
+                        data_site,
+                        key_map_json,
+                        sparql_query_wrapper,
+                        fl_sparql,
+                        search_item_with_instance_given_name_sparql,
+                        search_item_with_instance_family_name_sparql,
+                        search_issn_sparql,
+                        search_orcid_id_sparql,
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
                     )
             # if doi isn't available in ADS, search ADS bibcode in ADS database
             else:
@@ -145,7 +149,11 @@ def import_from_ads(
                     print(
                         f"{ads_bibcode} does not exist on wikidata, creating item"
                     )
-                    orcid_pub_list, affiliation_list, arxiv_class_list = define_refreshable_lists(article)
+                    (
+                        orcid_pub_list,
+                        affiliation_list,
+                        arxiv_class_list,
+                    ) = define_refreshable_lists(article)
                     create_article_item(
                         article,
                         data_site,
@@ -158,7 +166,7 @@ def import_from_ads(
                         search_orcid_id_sparql,
                         orcid_pub_list,
                         affiliation_list,
-                        arxiv_class_list
+                        arxiv_class_list,
                     )
 
 
@@ -175,7 +183,7 @@ def create_article_item(
     search_orcid_id_sparql,
     orcid_pub_list,
     affiliation_list,
-    arxiv_class_list
+    arxiv_class_list,
 ):
     # get title of article
     title = article.title[0]
@@ -205,7 +213,7 @@ def create_article_item(
         search_orcid_id_sparql,
         orcid_pub_list,
         affiliation_list,
-        arxiv_class_list
+        arxiv_class_list,
     )
 
 
@@ -266,7 +274,7 @@ def search_and_add_statement_from_ads(
     search_orcid_id_sparql,
     orcid_pub_list,
     affiliation_list,
-    arxiv_class_list
+    arxiv_class_list,
 ):
     # Manually add P31 (instance of) statement to wikidata item
     # Q13442814 is scholarly article id
@@ -419,7 +427,10 @@ def search_and_add_statement_from_ads(
                                 author_last_names = get_author_last_names(v)
 
                                 # try to look at orcid
-                                if orcid_pub_list and orcid_pub_list[index] != empty_value:
+                                if (
+                                    orcid_pub_list
+                                    and orcid_pub_list[index] != empty_value
+                                ):
                                     print(author_name, orcid_pub_list[index])
 
                                     # search if an orcid id exists on wikidata
@@ -707,7 +718,12 @@ def filter_arxiv_ids_from_alternate_bibcodes(bibcodes):
 
 # add qualifiers to author string
 def add_qualifiers_to_author_string(
-    data_site, index, affiliation_lists, author_given_names, author_last_names, claim
+    data_site,
+    index,
+    affiliation_lists,
+    author_given_names,
+    author_last_names,
+    claim,
 ):
     # add serials ordinal P1545
     add_qualifiers_to_claim(data_site, "P1545", str(index + 1), claim)
@@ -720,7 +736,9 @@ def add_qualifiers_to_author_string(
         affiliation = affiliation_lists[index]
         if affiliation_separator in affiliation:
             # split affiliation to list
-            affiliation_list_of_author = affiliation.split(affiliation_separator)
+            affiliation_list_of_author = affiliation.split(
+                affiliation_separator
+            )
             for affiliations in affiliation_list_of_author:
                 # strip the string
                 striped_affiliations = affiliations.strip()
