@@ -89,22 +89,6 @@ def import_from_ads(
 
         # iterate over all results
         for article in search_query:
-            # define refreshable lists
-            orcid_pub_list = []
-            affiliation_list = []
-            arxiv_class_list = []
-            # get orcid id to list
-            if article.orcid_pub:
-                orcid_pub_list = article.orcid_pub
-                print(f"public orcid id list: {orcid_pub_list}")
-            # get affiliation string to list
-            if article.aff:
-                affiliation_list = article.aff
-                print(f"affiliation list: {affiliation_list}")
-            # get arxiv classification to list
-            if article.arxiv_class:
-                arxiv_class_list = article.arxiv_class
-                print(f"arxiv class list: {arxiv_class_list}")
             # search doi in ADS
             if article.doi:
                 print("doi: ", article.doi)
@@ -129,19 +113,20 @@ def import_from_ads(
                     print(f"{doi} already exists, don't do anything")
                 else:
                     print(f"{doi} does not exist on wikidata, creating item")
+                    orcid_pub_list, affiliation_list, arxiv_class_list = define_refreshable_lists(article)
                     create_article_item(
-                        article,
-                        data_site,
-                        key_map_json,
-                        sparql_query_wrapper,
-                        fl_sparql,
-                        search_item_with_instance_given_name_sparql,
-                        search_item_with_instance_family_name_sparql,
-                        search_issn_sparql,
-                        search_orcid_id_sparql,
-                        orcid_pub_list,
-                        affiliation_list,
-                        arxiv_class_list
+                            article,
+                            data_site,
+                            key_map_json,
+                            sparql_query_wrapper,
+                            fl_sparql,
+                            search_item_with_instance_given_name_sparql,
+                            search_item_with_instance_family_name_sparql,
+                            search_issn_sparql,
+                            search_orcid_id_sparql,
+                            orcid_pub_list,
+                            affiliation_list,
+                            arxiv_class_list
                     )
             # if doi isn't available in ADS, search ADS bibcode in ADS database
             else:
@@ -160,6 +145,7 @@ def import_from_ads(
                     print(
                         f"{ads_bibcode} does not exist on wikidata, creating item"
                     )
+                    orcid_pub_list, affiliation_list, arxiv_class_list = define_refreshable_lists(article)
                     create_article_item(
                         article,
                         data_site,
@@ -242,6 +228,27 @@ def compose_description_from_date(date: str) -> str:
         return f"scholarly article published in {date_time.strftime('%B %Y')}"
     else:
         return "scholarly article"
+
+
+# define refreshable lists
+def define_refreshable_lists(article):
+    # define refreshable lists
+    orcid_pub_list = []
+    affiliation_list = []
+    arxiv_class_list = []
+    # get orcid id to list
+    if article.orcid_pub:
+        orcid_pub_list = article.orcid_pub
+        print(f"public orcid id list: {orcid_pub_list}")
+    # get affiliation string to list
+    if article.aff:
+        affiliation_list = article.aff
+        print(f"affiliation list: {affiliation_list}")
+    # get arxiv classification to list
+    if article.arxiv_class:
+        arxiv_class_list = article.arxiv_class
+        print(f"arxiv class list: {arxiv_class_list}")
+    return orcid_pub_list, affiliation_list, arxiv_class_list
 
 
 # Automatically search and add statements from ADS
@@ -411,8 +418,6 @@ def search_and_add_statement_from_ads(
                                 # get author family name
                                 author_last_names = get_author_last_names(v)
 
-                                print(f"orcid list: {orcid_pub_list}")
-                                print(f"index: {index}")
                                 # try to look at orcid
                                 if orcid_pub_list and orcid_pub_list[index] != empty_value:
                                     print(author_name, orcid_pub_list[index])
