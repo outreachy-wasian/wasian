@@ -9,4 +9,4 @@ SELECT DISTINCT ?item ?itemLabel {
   ?class wdt:P3176 ?item
   SERVICE wikibase:label { bd:serviceParam wikibase:language 'en' }
 
-} ORDER BY ?itemLabel
+}

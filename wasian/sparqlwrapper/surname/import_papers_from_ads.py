@@ -282,7 +282,7 @@ def search_and_add_statement_from_ads(
     create_a_claim(data_site, "P31", scholarly_article_page, item, item_id)
 
     # key value a pair of articles
-    for key, value in article.items():
+    for key, value in sorted(article.items(), reverse=True):
         # ensure it has a key and the value isn't empty
         if hasattr(article, key) and value is not None:
             # repalce the key
