@@ -1,0 +1,10 @@
+# https://wikitech.wikimedia.org/wiki/Help:Toolforge/Jobs_framework
+---
+# a continuous job
+- name: adsbot-english-paper-continuous
+  command: $HOME/run_adsbot_english_paper_venv.sh
+  image: tf-python39
+  mem: 4Gi
+  cpu: 1
+  continuous: true
+  emails: all
